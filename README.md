@@ -1,4 +1,4 @@
-# netconnectd
+# netconnectd JESSIE instructions
 
 netconnectd is a small daemon that ensures connectivity for single-PCB devices such as the Raspberry Pi where you don't 
 always have the means to setup your network interfaces by hand.
@@ -66,14 +66,14 @@ well, the above package installation instructions have since been updated to ref
 We don't want neither `hostapd` nor `dnsmasq` to automatically startup, so make sure their automatic start on boot is 
 disabled:
 
-    sudo update-rc.d -f hostapd remove
-    sudo update-rc.d -f dnsmasq remove
+    sudo systemctl disable dnsmasq.service
+    sudo systemctl disable hostapd.service 
 
 You can verify that this worked by checking that there are no files left in `/etc/rc*.d` referencing those two services,
 so the following to commands should return `0`:
 
-    ls /etc/rc*.d | grep hostapd | wc -l
-    ls /etc/rc*.d | grep dnsmasq | wc -l
+    sudo systemctl status dnsmasq.service
+    sudo systemctl status hostapd.service 
 
 If you are running NetworkManager (default for Ubuntu or other desktop linux distributions, usually not the case for 
 Raspbian), make sure to disable its own `dnsmasq` by editing `/etc/NetworkManager/NetworkManager.conf` and commenting
@@ -92,13 +92,12 @@ out the line that says `dns=dnsmasq`, it should look something like this afterwa
 You'll also need to modify `/etc/dhcp/dhclient.conf` to include a timeout setting, e.g.
 
     timeout 60;
+    
+You'll also need to modify /etc/network/interfaces and comment WLAN0 interface
 
-Otherwise -- due to a limitation of how Debian/Ubuntu currently parses Wifi configurations in `/etc/network/interfaces` 
--- netconnectd won't be able to detect when it couldn't connect to your configured local wifi and will never start the 
-access point mode. The value above will mean that it will take a maximum of 60sec before netconnectd will be notified 
-by the system that the connection was unsuccessful -- you might want to lower that value even more but keep in mind that 
-your wifi's DHCP server has to respond within that timeout for the connection to be considered successful.
-
+    sudo nano /etc/network/interfaces
+    
+    
 ### Check that your wifi card supports AP mode
 
 Before you continue **make absolutely sure** that hostapd works with your wifi card/dongle! To test, create a file 
@@ -132,7 +131,7 @@ to do that).
 It's finally time to install `netconnectd`:
 
     cd
-    git clone https://github.com/foosel/netconnectd
+    git clone https://github.com/marianoronchi/netconnectd
     cd netconnectd
     sudo python setup.py install
     sudo python setup.py install_extras
@@ -147,6 +146,7 @@ Modify `/etc/netconnectd.yaml` as necessary:
  
 Last, start netconnectd:
 
+    sudo systemctl daemon-reload
     sudo service netconnectd start
 
 Verify that the logfile looks ok-ish:
@@ -172,5 +172,5 @@ You can always get help with `netconnectcli --help` or `netconnectcli <command> 
 
 If everything looks alright, configure the service so that it starts at boot up:
 
-    sudo update-rc.d netconnectd defaults 98
+    sudo systemctl enable netconnectd
 
